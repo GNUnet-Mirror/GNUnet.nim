@@ -3,7 +3,7 @@ import gnunet_scheduler_lib
 import gnunet_time_lib
 import gnunet_configuration_lib
 import asyncdispatch
-import asynccadet
+#import asynccadet
 import logging
 import tables
 

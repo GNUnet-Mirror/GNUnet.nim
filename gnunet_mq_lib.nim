@@ -10,12 +10,11 @@ else:
     libname* = "libgnunetutil.so"
 
 
-import gnunet_types, gnunet_scheduler_lib, gnunet_configuration_lib
-
-
 type
   GNUNET_MQ_Envelope* {.bycopy.} = object
+
   
+import gnunet_types, gnunet_scheduler_lib
 
 
 proc GNUNET_MQ_env_get_msg*(env: ptr GNUNET_MQ_Envelope): ptr GNUNET_MessageHeader {.
@@ -91,6 +90,9 @@ proc GNUNET_MQ_copy_handlers2*(handlers: ptr GNUNET_MQ_MessageHandler;
 
 proc GNUNET_MQ_count_handlers*(handlers: ptr GNUNET_MQ_MessageHandler): cuint {.
     cdecl, importc: "GNUNET_MQ_count_handlers", dynlib: libname.}
+
+proc GNUNET_MQ_msg*(mhp: ptr ptr GNUNET_MessageHeader; size: uint16; `type`: uint16): ptr GNUNET_MQ_Envelope {.
+    cdecl, importc: "GNUNET_MQ_msg_", dynlib: libname.}
 
 proc GNUNET_MQ_msg_copy*(hdr: ptr GNUNET_MessageHeader): ptr GNUNET_MQ_Envelope {.
     cdecl, importc: "GNUNET_MQ_msg_copy", dynlib: libname.}
