@@ -21,20 +21,20 @@ type
 
 
 type
-  GNUNET_HashCode* {.bycopy.} = object
-    bits*: array[512 div 8 div sizeof((uint32)), uint32]
-
-
-type
-  GNUNET_PeerIdentity* {.bycopy.} = object
-    public_key*: GNUNET_CRYPTO_EddsaPublicKey
-
-
-type
   GNUNET_DISK_FileHandle* {.bycopy.} = object
     fd*: cint
 
 
 type
   GNUNET_NETWORK_Handle* {.bycopy.} = object
+
+
+type
+  GNUNET_SCHEDULER_Priority* {.size: sizeof(cint).} = enum
+    GNUNET_SCHEDULER_PRIORITY_KEEP = 0, GNUNET_SCHEDULER_PRIORITY_IDLE = 1,
+    GNUNET_SCHEDULER_PRIORITY_BACKGROUND = 2,
+    GNUNET_SCHEDULER_PRIORITY_DEFAULT = 3, GNUNET_SCHEDULER_PRIORITY_HIGH = 4,
+    GNUNET_SCHEDULER_PRIORITY_UI = 5, GNUNET_SCHEDULER_PRIORITY_URGENT = 6,
+    GNUNET_SCHEDULER_PRIORITY_SHUTDOWN = 7, GNUNET_SCHEDULER_PRIORITY_COUNT = 8
+
 

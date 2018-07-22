@@ -1,5 +1,9 @@
-import gnunet_cadet_service, gnunet_types, gnunet_mq_lib, gnunet_protocols
-import asyncdispatch, posix
+import
+  gnunet_cadet_service, gnunet_types, gnunet_mq_lib, gnunet_crypto_lib, gnunet_protocols
+import
+  gnunet_application
+import
+  asyncdispatch, posix
 
 type
   CadetHandle = object
@@ -11,7 +15,7 @@ type
 
   CadetChannel = object
     handle: ptr GNUNET_CADET_Channel
-    peer: ptr GNUNET_PeerIdentity
+    peer: GNUNET_PeerIdentity
     messages*: FutureStream[seq[byte]]
 
 proc channelDisconnectCb(cls: pointer,
@@ -21,23 +25,21 @@ proc channelDisconnectCb(cls: pointer,
 
 proc channelConnectCb(cls: pointer,
                       gnunetChannel: ptr GNUNET_CADET_Channel,
-                      source: ptr GNUNET_PeerIdentity) {.cdecl.} =
+                      source: ptr GNUNET_PeerIdentity): pointer {.cdecl.} =
   var port = cast[ptr CadetPort](cls)
   var channel = CadetChannel(handle: gnunetChannel,
-                             peer: source,
+                             peer: GNUNET_PeerIdentity(public_key: source.public_key),
                              messages: newFutureStream[seq[byte]]())
   asyncCheck port.channels.write(channel)
+  return addr channel
 
 proc channelMessageCb(cls: pointer,
                       messageHeader: ptr GNUNET_MessageHeader) {.cdecl.} =
   var channel = cast[ptr CadetChannel](cls)
-  # FIXME: is there a less ugly way of doing pointer arithmetic?
-  let payload = cast[pointer](
-      cast[uint](messageHeader) + uint(sizeof(GNUNET_MessageHeader))
-  )
   let payloadLen = int(ntohs(messageHeader.size)) - sizeof(GNUNET_MessageHeader)
+  let messageHeader = cast[ptr array[2, GNUNET_MessageHeader]](messageHeader)
   var payloadBuf = newSeq[byte](payloadLen)
-  copyMem(addr payloadBuf[0], payload, payloadLen)
+  copyMem(addr payloadBuf[0], addr messageHeader[1], payloadLen)
   asyncCheck channel.messages.write(payloadBuf)
 
 proc channelMessageCheckCb(cls: pointer,
@@ -58,8 +60,9 @@ proc messageHandlers(): array[2, GNUNET_MQ_MessageHandler] =
                              expected_size: 0)
   ]
 
-proc portHash(port: string): GNUNET_HashCode =
-  GNUNET_CRYPTO_hash(addr port[0], port.len(), addr result) # FIXME
+proc hashString(port: string): GNUNET_HashCode =
+  var port: cstring = port
+  GNUNET_CRYPTO_hash(addr port, port.len(), addr result)
 
 proc sendMessage*(channel: CadetChannel, payload: seq[byte]) =
   let messageLen = uint16(payload.len() + sizeof(GNUNET_MessageHeader))
@@ -69,36 +72,41 @@ proc sendMessage*(channel: CadetChannel, payload: seq[byte]) =
                                GNUNET_MESSAGE_TYPE_CADET_CLI)
   GNUNET_MQ_send(GNUNET_CADET_get_mq(channel.handle), envelope)
 
-proc connect*(): CadetHandle =
-  var configHandle = #FIXME
-  result = CadetHandle(handle: GNUNET_CADET_connect(configHandle))
+proc connectCadet*(app: GnunetApplication): CadetHandle =
+  result = CadetHandle(handle: GNUNET_CADET_connect(app.configHandle))
 
 proc openPort*(handle: CadetHandle, port: string): CadetPort =
   result = CadetPort(handle: nil,
                      channels: newFutureStream[CadetChannel]())
-  let handlers = messageHandlers()
+  var handlers = messageHandlers()
+  var port = hashString(port)
   result.handle = GNUNET_CADET_open_port(handle.handle,
-                                         port: portHash(port),
-                                         connects: channelConnectCb,
-                                         connects_cls: addr result,
-                                         window_changes: nil,
-                                         disconnects: channelDisconnectCb,
-                                         handlers: handlers)
+                                         addr port,
+                                         channelConnectCb,
+                                         addr result,
+                                         nil,
+                                         channelDisconnectCb,
+                                         addr handlers[0])
 
 proc close*(port: CadetPort) =
   GNUNET_CADET_close_port(port.handle)
 
-proc createChannel*(handle: CadetHandle, peer: GnunetPeer, port: string): CadetChannel =
+proc createChannel*(handle: CadetHandle, peer: string, port: string): CadetChannel =
+  var peerIdentity: GNUNET_PeerIdentity
+  discard GNUNET_CRYPTO_eddsa_public_key_from_string(peer, #FIXME: don't discard
+                                                     peer.len(),
+                                                     addr peerIdentity.public_key)
   result = CadetChannel(handle: nil,
-                        peer: peer,
+                        peer: peerIdentity,
                         messages: newFutureStream[seq[byte]]("createChannel"))
-  let handlers = messageHandlers()
-  result.handle = GNUNET_CADET_channel_create(h: handle.handle,
-                                              channel_cls: addr result,
-                                              destination: peer.peerId,
-                                              port: portHash(port),
-                                              options: GNUNET_CADET_OPTION_DEFAULT,
-                                              window_changes: nil,
-                                              disconnects: channelDisconnectCb,
-                                              handlers: handlers)
+  var handlers = messageHandlers()
+  var port = hashString(port)
+  result.handle = GNUNET_CADET_channel_create(handle.handle,
+                                              addr result,
+                                              addr result.peer,
+                                              addr port,
+                                              GNUNET_CADET_OPTION_DEFAULT,
+                                              nil,
+                                              channelDisconnectCb,
+                                              addr handlers[0])
  

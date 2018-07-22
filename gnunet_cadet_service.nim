@@ -10,7 +10,7 @@ else:
     libname* = "libgnunetcadet.so"
 
 import
-  gnunet_types, gnunet_mq_lib, gnunet_configuration_lib
+  gnunet_types, gnunet_mq_lib, gnunet_crypto_lib, gnunet_configuration_lib
 
 
 const
