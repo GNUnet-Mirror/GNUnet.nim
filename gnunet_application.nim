@@ -4,12 +4,13 @@ import gnunet_time_lib
 import gnunet_configuration_lib
 import asyncdispatch, tables, logging
 
-type GnunetApplication* = object
-  timeoutUs: uint64
-  tasks: Table[ptr GNUNET_SCHEDULER_Task, ptr GNUNET_SCHEDULER_FdInfo]
-  schedulerDriver: GNUNET_SCHEDULER_Driver
-  schedulerHandle: ptr GNUNET_SCHEDULER_Handle
-  configHandle*: ptr GNUNET_CONFIGURATION_Handle
+type
+  GnunetApplication* = object
+    timeoutUs: uint64
+    tasks: Table[ptr GNUNET_SCHEDULER_Task, ptr GNUNET_SCHEDULER_FdInfo]
+    schedulerDriver: GNUNET_SCHEDULER_Driver
+    schedulerHandle: ptr GNUNET_SCHEDULER_Handle
+    configHandle*: ptr GNUNET_CONFIGURATION_Handle
 
 proc schedulerAdd(cls: pointer,
                   task: ptr GNUNET_SCHEDULER_Task,

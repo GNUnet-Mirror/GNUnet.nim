@@ -81,3 +81,7 @@ proc GNUNET_SCHEDULER_driver_done*(sh: ptr GNUNET_SCHEDULER_Handle) {.cdecl,
 proc GNUNET_SCHEDULER_shutdown*() {.cdecl, importc: "GNUNET_SCHEDULER_shutdown",
                                   dynlib: libname.}
 
+proc GNUNET_SCHEDULER_add_now*(task: GNUNET_SCHEDULER_TaskCallback;
+                              task_cls: pointer): ptr GNUNET_SCHEDULER_Task {.cdecl,
+    importc: "GNUNET_SCHEDULER_add_now", dynlib: libname.}
+

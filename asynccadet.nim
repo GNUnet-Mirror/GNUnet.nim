@@ -1,9 +1,9 @@
 import
-  gnunet_cadet_service, gnunet_types, gnunet_mq_lib, gnunet_crypto_lib, gnunet_protocols
+  gnunet_cadet_service, gnunet_types, gnunet_mq_lib, gnunet_crypto_lib, gnunet_protocols, gnunet_scheduler_lib, gnunet_configuration_lib
 import
   gnunet_application
 import
-  asyncdispatch, posix
+  asyncdispatch, posix, tables
 
 type
   CadetHandle = object
@@ -46,6 +46,10 @@ proc channelMessageCheckCb(cls: pointer,
                            messageHeader: ptr GNUNET_MessageHeader): cint {.cdecl.} =
   result = GNUNET_OK
 
+proc cadetConnectCb(cls: pointer) {.cdecl.} =
+  let event = cast[AsyncEvent](cls)
+  event.trigger()
+
 proc messageHandlers(): array[2, GNUNET_MQ_MessageHandler] =
   result = [
     GNUNET_MQ_MessageHandler(mv: channelMessageCheckCb,
@@ -72,8 +76,16 @@ proc sendMessage*(channel: CadetChannel, payload: seq[byte]) =
                                GNUNET_MESSAGE_TYPE_CADET_CLI)
   GNUNET_MQ_send(GNUNET_CADET_get_mq(channel.handle), envelope)
 
-proc connectCadet*(app: GnunetApplication): CadetHandle =
-  result = CadetHandle(handle: GNUNET_CADET_connect(app.configHandle))
+proc connectCadet*(app: GnunetApplication): Future[CadetHandle] =
+  let future = newFuture[CadetHandle]("connectCadet")
+  var event = newAsyncEvent()
+  discard GNUNET_SCHEDULER_add_now(cadetConnectCb, addr event)
+  proc eventCb(fd: AsyncFd): bool =
+    let cadetHandle = CadetHandle(handle: GNUNET_CADET_connect(app.configHandle))
+    future.complete(cadetHandle)
+    true
+  addEvent(event, eventCb)
+  return future
 
 proc openPort*(handle: CadetHandle, port: string): CadetPort =
   result = CadetPort(handle: nil,

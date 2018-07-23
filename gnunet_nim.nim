@@ -2,9 +2,13 @@ import gnunet_application
 import asyncdispatch
 import asynccadet
 
+proc firstTask(gnunetApp: GnunetApplication) {.async.} =
+  let cadet = await gnunetApp.connectCadet()
+  echo "hello"
+
 proc main() =
   var gnunetApp = initGnunetApplication("~/.gnunet/gnunet.conf")
-  var cadet = gnunetApp.connectCadet()
+  asyncCheck firstTask(gnunetApp)
   try:
     while true:
       poll(gnunetApp.millisecondsUntilTimeout())
