@@ -2,7 +2,8 @@ import gnunet_application
 import asyncdispatch
 import asynccadet
 
-proc firstTask(gnunetApp: GnunetApplication) {.async.} =
+proc firstTask(gnunetApp: ref GnunetApplication) {.async.} =
+  echo "connecting Cadet"
   let cadet = await gnunetApp.connectCadet()
   echo "hello"
 
@@ -11,6 +12,7 @@ proc main() =
   asyncCheck firstTask(gnunetApp)
   try:
     while true:
+      echo "polling, timeout = ", gnunetApp.millisecondsUntilTimeout()
       poll(gnunetApp.millisecondsUntilTimeout())
       gnunetApp.doWork()
   except ValueError:
