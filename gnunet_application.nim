@@ -11,6 +11,7 @@ type
     schedulerDriver: GNUNET_SCHEDULER_Driver
     schedulerHandle: ptr GNUNET_SCHEDULER_Handle
     configHandle*: ptr GNUNET_CONFIGURATION_Handle
+    connectEvents*: Table[string, AsyncEvent]
 
 proc schedulerAdd(cls: pointer,
                   task: ptr GNUNET_SCHEDULER_Task,
@@ -66,6 +67,7 @@ proc initGnunetApplication*(configFile: string): ref GnunetApplication =
                                                 set_wakeup: schedulerSetWakeup)
   app.schedulerHandle = GNUNET_SCHEDULER_driver_init(addr app.schedulerDriver)
   app.configHandle = GNUNET_CONFIGURATION_create()
+  app.connectEvents = initTable[string, AsyncEvent]()
   assert(GNUNET_SYSERR != GNUNET_CONFIGURATION_load(app.configHandle, configFile))
   return app
 
@@ -82,7 +84,7 @@ proc microsecondsUntilTimeout*(app: ref GnunetApplication): int =
   if app.timeoutUs < now.abs_value_us:
     debug("app.timeoutUs = ", app.timeoutUs, ", now = ", now.abs_value_us)
     return 0
-  elif app.timeoutUs == 0xff_ff_ff_ff_ff_ff_ff_ff'u64:
+  elif app.timeoutUs == 0xff_ff_ff_ff_ff_ff_ff_ff'u64: # high(uint64) not implemented
     return -1
   return int(min(app.timeoutUs - now.abs_value_us, uint64(high(cint))))
 

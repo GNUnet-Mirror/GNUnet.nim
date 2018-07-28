@@ -48,8 +48,11 @@ proc channelMessageCheckCb(cls: pointer,
   result = GNUNET_OK
 
 proc cadetConnectCb(cls: pointer) {.cdecl.} =
-  let event = cast[AsyncEvent](cls)
-  event.trigger()
+  let app = cast[ptr GnunetApplication](cls)
+  echo "cadetConnectCb"
+  var event: AsyncEvent
+  if app.connectEvents.take("cadet", event):
+    event.trigger()
 
 proc messageHandlers(): array[2, GNUNET_MQ_MessageHandler] =
   result = [
@@ -79,8 +82,8 @@ proc sendMessage*(channel: CadetChannel, payload: seq[byte]) =
 
 proc connectCadet*(app: ref GnunetApplication): Future[CadetHandle] =
   let future = newFuture[CadetHandle]("connectCadet")
-  var event = newAsyncEvent()
-  discard GNUNET_SCHEDULER_add_now(cadetConnectCb, addr event)
+  let event = app.connectEvents.mgetOrPut("cadet", newAsyncEvent())
+  discard GNUNET_SCHEDULER_add_now(cadetConnectCb, addr app[])
   proc eventCb(fd: AsyncFd): bool =
     debug("eventCb")
     let cadetHandle = CadetHandle(handle: GNUNET_CADET_connect(app.configHandle),
