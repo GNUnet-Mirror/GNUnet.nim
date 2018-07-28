@@ -8,7 +8,7 @@ proc firstTask(gnunetApp: ref GnunetApplication) {.async.} =
   echo "hello"
 
 proc main() =
-  var gnunetApp = initGnunetApplication("~/.gnunet/gnunet.conf")
+  var gnunetApp = initGnunetApplication("gnunet.conf")
   asyncCheck firstTask(gnunetApp)
   try:
     while true:
