@@ -50,9 +50,11 @@ proc channelMessageCheckCb(cls: pointer,
 proc cadetConnectCb(cls: pointer) {.cdecl.} =
   let app = cast[ptr GnunetApplication](cls)
   echo "cadetConnectCb"
-  var event: AsyncEvent
-  if app.connectEvents.take("cadet", event):
-    event.trigger()
+  var future: FutureBase
+  if app.connectFutures.take("cadet", future):
+    let cadetHandle = CadetHandle(handle: GNUNET_CADET_connect(app.configHandle),
+                                  openPorts: newSeq[ref CadetPort]())
+    Future[CadetHandle](future).complete(cadetHandle)
 
 proc messageHandlers(): array[2, GNUNET_MQ_MessageHandler] =
   result = [
@@ -81,17 +83,9 @@ proc sendMessage*(channel: CadetChannel, payload: seq[byte]) =
   GNUNET_MQ_send(GNUNET_CADET_get_mq(channel.handle), envelope)
 
 proc connectCadet*(app: ref GnunetApplication): Future[CadetHandle] =
-  let future = newFuture[CadetHandle]("connectCadet")
-  let event = app.connectEvents.mgetOrPut("cadet", newAsyncEvent())
+  result = newFuture[CadetHandle]("connectCadet")
+  app.connectFutures.add("cadet", result)
   discard GNUNET_SCHEDULER_add_now(cadetConnectCb, addr app[])
-  proc eventCb(fd: AsyncFd): bool =
-    debug("eventCb")
-    let cadetHandle = CadetHandle(handle: GNUNET_CADET_connect(app.configHandle),
-                                  openPorts: newSeq[ref CadetPort]())
-    future.complete(cadetHandle)
-    true
-  addEvent(event, eventCb)
-  return future
 
 proc openPort*(handle: var CadetHandle, port: string): ref CadetPort =
   var handlers = messageHandlers()
@@ -111,7 +105,7 @@ proc openPort*(handle: var CadetHandle, port: string): ref CadetPort =
 
 proc closePort*(handle: var CadetHandle, port: ref CadetPort) =
   GNUNET_CADET_close_port(port.handle)
-  handle.openPorts.delete(handle.openPorts.find(port)) 
+  handle.openPorts.delete(handle.openPorts.find(port))
 
 proc createChannel*(handle: CadetHandle, peer: string, port: string): CadetChannel =
   var peerIdentity: GNUNET_PeerIdentity

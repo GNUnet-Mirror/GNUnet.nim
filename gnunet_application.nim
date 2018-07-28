@@ -11,7 +11,7 @@ type
     schedulerDriver: GNUNET_SCHEDULER_Driver
     schedulerHandle: ptr GNUNET_SCHEDULER_Handle
     configHandle*: ptr GNUNET_CONFIGURATION_Handle
-    connectEvents*: Table[string, AsyncEvent]
+    connectFutures*: Table[string, FutureBase]
 
 proc schedulerAdd(cls: pointer,
                   task: ptr GNUNET_SCHEDULER_Task,
@@ -67,7 +67,7 @@ proc initGnunetApplication*(configFile: string): ref GnunetApplication =
                                                 set_wakeup: schedulerSetWakeup)
   app.schedulerHandle = GNUNET_SCHEDULER_driver_init(addr app.schedulerDriver)
   app.configHandle = GNUNET_CONFIGURATION_create()
-  app.connectEvents = initTable[string, AsyncEvent]()
+  app.connectFutures = initTable[string, FutureBase]()
   assert(GNUNET_SYSERR != GNUNET_CONFIGURATION_load(app.configHandle, configFile))
   return app
 
