@@ -18,8 +18,7 @@ proc main() =
       poll(gnunetApp.millisecondsUntilTimeout())
       gnunetApp.doWork()
   except ValueError:
-    discard
-  gnunetApp.cleanup()
-  echo "quitting"
+    echo "quitting"
 
 main()
+GC_fullCollect()

@@ -56,9 +56,14 @@ proc schedulerSetWakeup(cls: pointer,
   debug("setting new timeout: ", dt.abs_value_us)
   app.timeoutUs = dt.abs_value_us
 
+proc cleanup(app: ref GnunetApplication) =
+  echo "destroying GnunetApplication"
+  GNUNET_SCHEDULER_driver_done(app.schedulerHandle)
+  GNUNET_CONFIGURATION_destroy(app.configHandle)
+
 proc initGnunetApplication*(configFile: string): ref GnunetApplication =
   var app: ref GnunetApplication
-  new(app)
+  new(app, cleanup)
   app.timeoutUs = GNUNET_TIME_absolute_get_forever().abs_value_us
   app.tasks = initTable[ptr GNUNET_SCHEDULER_Task, ptr GNUNET_SCHEDULER_FdInfo]()
   app.schedulerDriver = GNUNET_SCHEDULER_Driver(cls: addr app[],
@@ -70,10 +75,6 @@ proc initGnunetApplication*(configFile: string): ref GnunetApplication =
   app.connectFutures = initTable[string, FutureBase]()
   assert(GNUNET_SYSERR != GNUNET_CONFIGURATION_load(app.configHandle, configFile))
   return app
-
-proc cleanup*(app: ref GnunetApplication) =
-  GNUNET_SCHEDULER_driver_done(app.schedulerHandle)
-  GNUNET_CONFIGURATION_destroy(app.configHandle)
 
 proc doWork*(app: ref GnunetApplication) =
   discard GNUNET_SCHEDULER_do_work(app.schedulerHandle) #FIXME: don't discard
