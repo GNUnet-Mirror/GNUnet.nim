@@ -4,8 +4,10 @@ import asynccadet
 
 proc firstTask(gnunetApp: ref GnunetApplication) {.async.} =
   echo "connecting Cadet"
-  let cadet = await gnunetApp.connectCadet()
-  echo "hello"
+  var cadet = await gnunetApp.connectCadet()
+  echo "connected"
+  cadet.disconnect()
+  echo "disconnected"
 
 proc main() =
   var gnunetApp = initGnunetApplication("gnunet.conf")

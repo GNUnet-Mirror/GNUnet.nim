@@ -82,11 +82,6 @@ proc sendMessage*(channel: CadetChannel, payload: seq[byte]) =
                                GNUNET_MESSAGE_TYPE_CADET_CLI)
   GNUNET_MQ_send(GNUNET_CADET_get_mq(channel.handle), envelope)
 
-proc connectCadet*(app: ref GnunetApplication): Future[CadetHandle] =
-  result = newFuture[CadetHandle]("connectCadet")
-  app.connectFutures.add("cadet", result)
-  discard GNUNET_SCHEDULER_add_now(cadetConnectCb, addr app[])
-
 proc openPort*(handle: var CadetHandle, port: string): ref CadetPort =
   var handlers = messageHandlers()
   var port = hashString(port)
@@ -126,3 +121,14 @@ proc createChannel*(handle: CadetHandle, peer: string, port: string): CadetChann
                                               channelDisconnectCb,
                                               addr handlers[0])
  
+proc connectCadet*(app: ref GnunetApplication): Future[CadetHandle] =
+  result = newFuture[CadetHandle]("connectCadet")
+  app.connectFutures.add("cadet", result)
+  discard GNUNET_SCHEDULER_add_now(cadetConnectCb, addr app[])
+
+proc disconnect*(handle: var CadetHandle) =
+  for port in handle.openPorts:
+    handle.closePort(port)
+  GNUNET_CADET_disconnect(handle.handle)
+
+

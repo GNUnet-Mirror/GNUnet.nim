@@ -82,7 +82,6 @@ proc microsecondsUntilTimeout*(app: ref GnunetApplication): int =
   ## get the duration until timeout in microseconds
   let now = GNUNET_TIME_absolute_get()
   if app.timeoutUs < now.abs_value_us:
-    debug("app.timeoutUs = ", app.timeoutUs, ", now = ", now.abs_value_us)
     return 0
   elif app.timeoutUs == 0xff_ff_ff_ff_ff_ff_ff_ff'u64: # high(uint64) not implemented
     return -1
