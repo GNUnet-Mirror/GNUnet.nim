@@ -100,6 +100,7 @@ proc openPort*(handle: var CadetHandle, port: string): ref CadetPort =
 
 proc closePort*(handle: var CadetHandle, port: ref CadetPort) =
   GNUNET_CADET_close_port(port.handle)
+  port.channels.complete()
   handle.openPorts.delete(handle.openPorts.find(port))
 
 proc createChannel*(handle: CadetHandle, peer: string, port: string): CadetChannel =

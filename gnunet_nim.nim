@@ -7,10 +7,12 @@ proc firstTask(gnunetApp: ref GnunetApplication) {.async.} =
   var cadet = await gnunetApp.connectCadet()
   echo "connected"
   let port = cadet.openPort("test")
-  let channel = await port.channels.read()
-  echo "incoming connection!"
-  let message = await channel.messages.read()
-  echo "got message: ", message
+  let (finished, channel) = await port.channels.read()
+  if not finished:
+    echo "incoming connection!"
+    let (finished, message) = await channel.messages.read()
+    if not finished:
+      echo "got message: ", message
   cadet.disconnect()
   echo "disconnected"
 
