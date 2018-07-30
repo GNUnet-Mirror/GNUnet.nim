@@ -19,6 +19,7 @@ proc schedulerAdd(cls: pointer,
   ## callback allowing GNUnet to add a file descriptor to the event loop
   type AddProc = proc(fd: AsyncFD, cb: proc(fd: AsyncFD): bool)
   var app = cast[ptr GnunetApplication](cls)
+  echo "adding fd ", fdi.sock
   let fd = AsyncFD(fdi.sock)
   proc addByInterest(interest: GNUNET_SCHEDULER_EventType, addProc: AddProc) : bool =
     result = false
@@ -31,9 +32,14 @@ proc schedulerAdd(cls: pointer,
         fdi.et = interest
         GNUNET_SCHEDULER_task_ready(task, fdi)
       addProc(fd, callback)
-  if addByInterest(GNUNET_SCHEDULER_EventType.GNUNET_SCHEDULER_ET_IN, addRead) or
-     addByInterest(GNUNET_SCHEDULER_EventType.GNUNET_SCHEDULER_ET_OUT, addWrite):
+  let addReadResult =
+    addByInterest(GNUNET_SCHEDULER_EventType.GNUNET_SCHEDULER_ET_IN, addRead)
+  let addWriteResult =
+    addByInterest(GNUNET_SCHEDULER_EventType.GNUNET_SCHEDULER_ET_OUT, addWrite)
+  echo "added read fd: ", addReadResult, ", added write fd: ", addWriteResult
+  if addReadResult or addWriteResult:
     app.tasks.add(task, fdi)
+    echo "added ok"
     return GNUNET_OK
   error("Cannot add file descriptor because the event type is not supported")
   return GNUNET_SYSERR
@@ -44,16 +50,19 @@ proc schedulerDelete(cls: pointer,
   var app = cast[ptr GnunetApplication](cls)
   var fdi: ptr GNUNET_SCHEDULER_FdInfo
   if app.tasks.take(task, fdi):
+    for v in app.tasks.values():
+      if v.sock == fdi.sock:
+        return GNUNET_OK
     unregister(AsyncFD(fdi.sock))
     return GNUNET_OK
-  error("Cannot remove file descriptor because it has not been added or is already gone")
+  echo("Cannot remove file descriptor because it has not been added or is already gone")
   return GNUNET_SYSERR
 
 proc schedulerSetWakeup(cls: pointer,
                         dt: GNUNET_TIME_Absolute) {.cdecl.} =
   ## callback allowing GNUnet to set a new wakeup time
   var app = cast[ptr GnunetApplication](cls)
-  debug("setting new timeout: ", dt.abs_value_us)
+  echo("setting new timeout: ", dt.abs_value_us)
   app.timeoutUs = dt.abs_value_us
 
 proc cleanup(app: ref GnunetApplication) =

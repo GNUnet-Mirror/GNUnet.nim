@@ -49,7 +49,6 @@ proc channelMessageCheckCb(cls: pointer,
 
 proc cadetConnectCb(cls: pointer) {.cdecl.} =
   let app = cast[ptr GnunetApplication](cls)
-  echo "cadetConnectCb"
   var future: FutureBase
   if app.connectFutures.take("cadet", future):
     let cadetHandle = CadetHandle(handle: GNUNET_CADET_connect(app.configHandle),
@@ -72,7 +71,7 @@ proc messageHandlers(): array[2, GNUNET_MQ_MessageHandler] =
 
 proc hashString(port: string): GNUNET_HashCode =
   var port: cstring = port
-  GNUNET_CRYPTO_hash(addr port, port.len(), addr result)
+  GNUNET_CRYPTO_hash(port, csize(port.len()), addr result)
 
 proc sendMessage*(channel: CadetChannel, payload: seq[byte]) =
   let messageLen = uint16(payload.len() + sizeof(GNUNET_MessageHeader))
@@ -91,7 +90,7 @@ proc openPort*(handle: var CadetHandle, port: string): ref CadetPort =
   openPort.handle = GNUNET_CADET_open_port(handle.handle,
                                            addr port,
                                            channelConnectCb,
-                                           addr openPort,
+                                           addr openPort[],
                                            nil,
                                            channelDisconnectCb,
                                            addr handlers[0])
