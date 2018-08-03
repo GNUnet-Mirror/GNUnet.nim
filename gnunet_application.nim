@@ -36,10 +36,9 @@ proc schedulerAdd(cls: pointer,
     addByInterest(GNUNET_SCHEDULER_EventType.GNUNET_SCHEDULER_ET_IN, addRead)
   let addWriteResult =
     addByInterest(GNUNET_SCHEDULER_EventType.GNUNET_SCHEDULER_ET_OUT, addWrite)
-  echo "added read fd: ", addReadResult, ", added write fd: ", addWriteResult
+  debug("added read fd: ", addReadResult, ", added write fd: ", addWriteResult)
   if addReadResult or addWriteResult:
     app.tasks.add(task, fdi)
-    echo "added ok"
     return GNUNET_OK
   error("Cannot add file descriptor because the event type is not supported")
   return GNUNET_SYSERR

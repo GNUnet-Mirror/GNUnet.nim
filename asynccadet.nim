@@ -6,18 +6,19 @@ import
   asyncdispatch, posix, tables, logging
 
 type
-  CadetHandle = object
+  CadetHandle* = object
     handle: ptr GNUNET_CADET_Handle
     openPorts: seq[ref CadetPort]
 
-  CadetPort = object
+  CadetPort* = object
     handle: ptr GNUNET_CADET_Port
-    channels*: FutureStream[CadetChannel]
+    channels*: FutureStream[ref CadetChannel]
+    activeChannels: seq[ref CadetChannel]
 
-  CadetChannel = object
+  CadetChannel* = object
     handle: ptr GNUNET_CADET_Channel
     peer: GNUNET_PeerIdentity
-    messages*: FutureStream[seq[byte]]
+    messages*: FutureStream[string]
 
 proc channelDisconnectCb(cls: pointer,
                          gnunetChannel: ptr GNUNET_CADET_Channel) {.cdecl.} =
@@ -28,20 +29,24 @@ proc channelConnectCb(cls: pointer,
                       gnunetChannel: ptr GNUNET_CADET_Channel,
                       source: ptr GNUNET_PeerIdentity): pointer {.cdecl.} =
   var port = cast[ptr CadetPort](cls)
-  var channel = CadetChannel(handle: gnunetChannel,
-                             peer: GNUNET_PeerIdentity(public_key: source.public_key),
-                             messages: newFutureStream[seq[byte]]())
-  asyncCheck port.channels.write(channel)
-  return addr channel
+  var channel: ref CadetChannel
+  new(channel)
+  channel.handle = gnunetChannel
+  channel.peer = GNUNET_PeerIdentity(public_key: source.public_key)
+  channel.messages = newFutureStream[string]()
+  port.activeChannels.add(channel)
+  waitFor port.channels.write(channel)
+  return addr channel[]
 
 proc channelMessageCb(cls: pointer,
                       messageHeader: ptr GNUNET_MessageHeader) {.cdecl.} =
   var channel = cast[ptr CadetChannel](cls)
+  GNUNET_CADET_receive_done(channel.handle)
   let payloadLen = int(ntohs(messageHeader.size)) - sizeof(GNUNET_MessageHeader)
-  let messageHeader = cast[ptr array[2, GNUNET_MessageHeader]](messageHeader)
-  var payloadBuf = newSeq[byte](payloadLen)
-  copyMem(addr payloadBuf[0], addr messageHeader[1], payloadLen)
-  asyncCheck channel.messages.write(payloadBuf)
+  let payload = cast[ptr GNUNET_MessageHeader](cast[ByteAddress](messageHeader) + sizeof(GNUNET_MessageHeader))
+  var payloadBuf = newString(payloadLen)
+  copyMem(addr payloadBuf[0], payload, payloadLen)
+  waitFor channel.messages.write(payloadBuf)
 
 proc channelMessageCheckCb(cls: pointer,
                            messageHeader: ptr GNUNET_MessageHeader): cint {.cdecl.} =
@@ -73,7 +78,7 @@ proc hashString(port: string): GNUNET_HashCode =
   var port: cstring = port
   GNUNET_CRYPTO_hash(port, csize(port.len()), addr result)
 
-proc sendMessage*(channel: CadetChannel, payload: seq[byte]) =
+proc sendMessage*(channel: CadetChannel, payload: string) =
   let messageLen = uint16(payload.len() + sizeof(GNUNET_MessageHeader))
   var messageHeader: ptr GNUNET_MessageHeader
   var envelope = GNUNET_MQ_msg(addr messageHeader,
@@ -86,7 +91,7 @@ proc openPort*(handle: var CadetHandle, port: string): ref CadetPort =
   var port = hashString(port)
   var openPort: ref CadetPort
   new(openPort)
-  openPort.channels = newFutureStream[CadetChannel]()
+  openPort.channels = newFutureStream[ref CadetChannel]()
   openPort.handle = GNUNET_CADET_open_port(handle.handle,
                                            addr port,
                                            channelConnectCb,
@@ -94,6 +99,7 @@ proc openPort*(handle: var CadetHandle, port: string): ref CadetPort =
                                            nil,
                                            channelDisconnectCb,
                                            addr handlers[0])
+  openPort.activeChannels = newSeq[ref CadetChannel]()
   handle.openPorts.add(openPort)
   return openPort
 
@@ -109,7 +115,7 @@ proc createChannel*(handle: CadetHandle, peer: string, port: string): CadetChann
                                                      addr peerIdentity.public_key)
   result = CadetChannel(handle: nil,
                         peer: peerIdentity,
-                        messages: newFutureStream[seq[byte]]("createChannel"))
+                        messages: newFutureStream[string]("createChannel"))
   var handlers = messageHandlers()
   var port = hashString(port)
   result.handle = GNUNET_CADET_channel_create(handle.handle,
