@@ -77,7 +77,7 @@ proc messageHandlers(): array[2, GNUNET_MQ_MessageHandler] =
 proc hashString(port: string): GNUNET_HashCode =
   GNUNET_CRYPTO_hash(cstring(port), csize(port.len()), addr result)
 
-proc sendMessage*(channel: CadetChannel, payload: string) =
+proc sendMessage*(channel: ref CadetChannel, payload: string) =
   let messageLen = uint16(payload.len() + sizeof(GNUNET_MessageHeader))
   var messageHeader: ptr GNUNET_MessageHeader
   var envelope = GNUNET_MQ_msg(addr messageHeader,
@@ -109,25 +109,27 @@ proc closePort*(handle: var CadetHandle, port: ref CadetPort) =
   port.channels.complete()
   handle.openPorts.delete(handle.openPorts.find(port))
 
-proc createChannel*(handle: CadetHandle, peer: string, port: string): CadetChannel =
+proc createChannel*(handle: CadetHandle, peer: string, port: string): ref CadetChannel =
   var peerIdentity: GNUNET_PeerIdentity
   discard GNUNET_CRYPTO_eddsa_public_key_from_string(peer, #FIXME: don't discard
                                                      peer.len(),
                                                      addr peerIdentity.public_key)
-  result = CadetChannel(handle: nil,
-                        peer: peerIdentity,
-                        messages: newFutureStream[string]("createChannel"))
   var handlers = messageHandlers()
   var port = hashString(port)
-  result.handle = GNUNET_CADET_channel_create(handle.handle,
-                                              addr result,
-                                              addr result.peer,
-                                              addr port,
-                                              GNUNET_CADET_OPTION_DEFAULT,
-                                              nil,
-                                              channelDisconnectCb,
-                                              addr handlers[0])
- 
+  var channel: ref CadetChannel
+  new(channel)
+  channel.peer = peerIdentity
+  channel.messages = newFutureStream[string]("createChannel")
+  channel.handle = GNUNET_CADET_channel_create(handle.handle,
+                                               addr channel[],
+                                               addr channel.peer,
+                                               addr port,
+                                               GNUNET_CADET_OPTION_DEFAULT,
+                                               nil,
+                                               channelDisconnectCb,
+                                               addr handlers[0])
+  return channel
+
 proc connectCadet*(app: ref GnunetApplication): Future[CadetHandle] =
   result = newFuture[CadetHandle]("connectCadet")
   app.connectFutures.add("cadet", result)
