@@ -10,12 +10,12 @@ type
     handle: ptr GNUNET_CADET_Handle
     openPorts: seq[ref CadetPort]
 
-  CadetPort* = ref object
+  CadetPort* = object
     handle: ptr GNUNET_CADET_Port
     channels*: FutureStream[ref CadetChannel]
     activeChannels: seq[ref CadetChannel]
 
-  CadetChannel* = ref object
+  CadetChannel* = object
     handle: ptr GNUNET_CADET_Channel
     peer: GNUNET_PeerIdentity
     messages*: FutureStream[string]
