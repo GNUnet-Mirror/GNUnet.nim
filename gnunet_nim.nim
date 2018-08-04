@@ -2,6 +2,7 @@ import gnunet_application
 import asyncdispatch, asyncfutures, asyncfile
 import asynccadet
 import parseopt
+import strutils
 
 proc firstTask(gnunetApp: ref GnunetApplication,
                peer: string,
@@ -25,9 +26,9 @@ proc firstTask(gnunetApp: ref GnunetApplication,
       let (hasData, message) = messagesFuture.read()
       if not hasData:
         break;
-      echo message
+      echo message.strip(leading = false)
     if stdinFuture.finished():
-      let input = stdinFuture.read()
+      let input = stdinFuture.read() & '\n'
       cadetChannel.sendMessage(input)
   stdinFile.close()
 
