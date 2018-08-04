@@ -32,7 +32,7 @@ proc firstTask(gnunetApp: ref GnunetApplication,
   stdinFile.close()
 
 proc main() =
-  var peer, port: string
+  var peer, port, configfile: string
   var optParser = initOptParser()
   for kind, key, value in optParser.getopt():
     case kind
@@ -41,9 +41,10 @@ proc main() =
     of cmdLongOption, cmdShortOption:
       case key
       of "port", "p": port = value
+      of "config", "c": configfile = value
     of cmdEnd:
       assert(false)
-  var gnunetApp = initGnunetApplication("gnunet.conf")
+  var gnunetApp = initGnunetApplication(configfile)
   asyncCheck firstTask(gnunetApp, peer, port)
   try:
     while true:
