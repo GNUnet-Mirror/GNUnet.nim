@@ -18,18 +18,20 @@ proc firstTask(gnunetApp: ref GnunetApplication,
   elif not peer.isNil() and not port.isNil():
     cadetChannel = cadet.createChannel(peer, port)
   let stdinFile = openAsync("/dev/stdin", fmRead)
+  var messagesFuture = cadetChannel.messages.read()
+  var stdinFuture = stdinFile.readline()
   while true:
-    let messagesFuture = cadetChannel.messages.read()
-    let stdinFuture = stdinFile.readLine()
     await messagesFuture or stdinFuture
     if messagesFuture.finished():
       let (hasData, message) = messagesFuture.read()
       if not hasData:
         break;
       echo message.strip(leading = false)
+      messagesFuture = cadetChannel.messages.read()
     if stdinFuture.finished():
       let input = stdinFuture.read() & '\n'
       cadetChannel.sendMessage(input)
+      stdinFuture = stdinFile.readline()
   stdinFile.close()
 
 proc main() =
