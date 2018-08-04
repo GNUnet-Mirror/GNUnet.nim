@@ -5,7 +5,7 @@ import gnunet_configuration_lib
 import asyncdispatch, tables, logging
 
 type
-  GnunetApplication* = object
+  GnunetApplication* = ref object
     timeoutUs: uint64
     tasks: Table[ptr GNUNET_SCHEDULER_Task, ptr GNUNET_SCHEDULER_FdInfo]
     schedulerDriver: GNUNET_SCHEDULER_Driver
