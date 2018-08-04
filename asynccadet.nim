@@ -75,8 +75,7 @@ proc messageHandlers(): array[2, GNUNET_MQ_MessageHandler] =
   ]
 
 proc hashString(port: string): GNUNET_HashCode =
-  var port: cstring = port
-  GNUNET_CRYPTO_hash(port, csize(port.len()), addr result)
+  GNUNET_CRYPTO_hash(cstring(port), csize(port.len()), addr result)
 
 proc sendMessage*(channel: CadetChannel, payload: string) =
   let messageLen = uint16(payload.len() + sizeof(GNUNET_MessageHeader))
@@ -84,6 +83,8 @@ proc sendMessage*(channel: CadetChannel, payload: string) =
   var envelope = GNUNET_MQ_msg(addr messageHeader,
                                messageLen,
                                GNUNET_MESSAGE_TYPE_CADET_CLI)
+  messageHeader = cast[ptr GNUNET_MessageHeader](cast[ByteAddress](messageHeader) + sizeof(GNUNET_MessageHeader))
+  copyMem(messageHeader, cstring(payload), payload.len())
   GNUNET_MQ_send(GNUNET_CADET_get_mq(channel.handle), envelope)
 
 proc openPort*(handle: var CadetHandle, port: string): ref CadetPort =

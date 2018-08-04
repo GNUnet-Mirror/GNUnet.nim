@@ -23,12 +23,12 @@ proc cadetConnect(gnunetApp: ref GnunetApplication,
                   port: string) {.async.} =
   var cadet = await gnunetApp.connectCadet()
   let cadetChannel = cadet.createChannel(peer, port)
-  cadetChannel.sendMessage("hello!")
   while true:
     let (hasData, message) = await cadetChannel.messages.read()
     if not hasData:
       break;
     echo "got message: ", message
+    cadetChannel.sendMessage("test")
 
 proc main() =
   var peer, port: string
@@ -43,7 +43,6 @@ proc main() =
     of cmdEnd:
       assert(false)
   var gnunetApp = initGnunetApplication("gnunet.conf")
-  echo "peer = ", peer, ", port = ", port
   if peer.isNil() and not port.isNil():
     asyncCheck cadetListen(gnunetApp, port)
   elif not peer.isNil() and not port.isNil():
