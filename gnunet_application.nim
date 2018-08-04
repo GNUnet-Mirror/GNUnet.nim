@@ -19,7 +19,7 @@ proc schedulerAdd(cls: pointer,
   ## callback allowing GNUnet to add a file descriptor to the event loop
   type AddProc = proc(fd: AsyncFD, cb: proc(fd: AsyncFD): bool)
   var app = cast[ptr GnunetApplication](cls)
-  echo "adding fd ", fdi.sock
+  debug("adding fd ", fdi.sock)
   let fd = AsyncFD(fdi.sock)
   proc addByInterest(interest: GNUNET_SCHEDULER_EventType, addProc: AddProc) : bool =
     result = false
@@ -61,7 +61,7 @@ proc schedulerSetWakeup(cls: pointer,
                         dt: GNUNET_TIME_Absolute) {.cdecl.} =
   ## callback allowing GNUnet to set a new wakeup time
   var app = cast[ptr GnunetApplication](cls)
-  echo("setting new timeout: ", dt.abs_value_us)
+  debug("setting new timeout: ", dt.abs_value_us)
   app.timeoutUs = dt.abs_value_us
 
 proc cleanup(app: ref GnunetApplication) =
