@@ -9,6 +9,7 @@ type
   CadetHandle* = object
     handle: ptr GNUNET_CADET_Handle
     openPorts: seq[ref CadetPort]
+    shutdownTask: ptr GNUNET_SCHEDULER_Task
 
   CadetPort* = object
     handle: ptr GNUNET_CADET_Port
@@ -52,14 +53,6 @@ proc channelMessageCheckCb(cls: pointer,
                            messageHeader: ptr GNUNET_MessageHeader): cint {.cdecl.} =
   result = GNUNET_OK
 
-proc cadetConnectCb(cls: pointer) {.cdecl.} =
-  let app = cast[ptr GnunetApplication](cls)
-  var future: FutureBase
-  if app.connectFutures.take("cadet", future):
-    let cadetHandle = CadetHandle(handle: GNUNET_CADET_connect(app.configHandle),
-                                  openPorts: newSeq[ref CadetPort]())
-    Future[CadetHandle](future).complete(cadetHandle)
-
 proc messageHandlers(): array[2, GNUNET_MQ_MessageHandler] =
   result = [
     GNUNET_MQ_MessageHandler(mv: channelMessageCheckCb,
@@ -87,7 +80,7 @@ proc sendMessage*(channel: ref CadetChannel, payload: string) =
   copyMem(messageHeader, cstring(payload), payload.len())
   GNUNET_MQ_send(GNUNET_CADET_get_mq(channel.handle), envelope)
 
-proc openPort*(handle: var CadetHandle, port: string): ref CadetPort =
+proc openPort*(handle: ref CadetHandle, port: string): ref CadetPort =
   var handlers = messageHandlers()
   var port = hashString(port)
   var openPort: ref CadetPort
@@ -104,12 +97,17 @@ proc openPort*(handle: var CadetHandle, port: string): ref CadetPort =
   handle.openPorts.add(openPort)
   return openPort
 
-proc closePort*(handle: var CadetHandle, port: ref CadetPort) =
+proc internalClosePort(handle: ptr CadetHandle, port: ref CadetPort) =
   GNUNET_CADET_close_port(port.handle)
   port.channels.complete()
+
+proc closePort*(handle: ref CadetHandle, port: ref CadetPort) =
+  internalClosePort(addr handle[], port)
   handle.openPorts.delete(handle.openPorts.find(port))
 
-proc createChannel*(handle: CadetHandle, peer: string, port: string): ref CadetChannel =
+proc createChannel*(handle: ref CadetHandle,
+                    peer: string,
+                    port: string): ref CadetChannel =
   var peerIdentity: GNUNET_PeerIdentity
   discard GNUNET_CRYPTO_eddsa_public_key_from_string(peer, #FIXME: don't discard
                                                      peer.len(),
@@ -130,14 +128,28 @@ proc createChannel*(handle: CadetHandle, peer: string, port: string): ref CadetC
                                                addr handlers[0])
   return channel
 
-proc connectCadet*(app: ref GnunetApplication): Future[CadetHandle] =
-  result = newFuture[CadetHandle]("connectCadet")
+proc shutdownCb(cls: pointer) {.cdecl.} =
+  let cadetHandle = cast[ptr CadetHandle](cls)
+  echo "shutdownCb"
+  for port in cadetHandle.openPorts:
+    echo "closing port"
+    cadetHandle.internalClosePort(port)
+  cadetHandle.openPorts.setLen(0)
+  echo "disconnecting cadet"
+  GNUNET_CADET_disconnect(cadetHandle.handle)
+
+proc cadetConnectCb(cls: pointer) {.cdecl.} =
+  let app = cast[ptr GnunetApplication](cls)
+  var future: FutureBase
+  if app.connectFutures.take("cadet", future):
+    let cadetHandle = new(CadetHandle)
+    cadetHandle.handle = GNUNET_CADET_connect(app.configHandle)
+    cadetHandle.openPorts = newSeq[ref CadetPort]()
+    cadetHandle.shutdownTask = GNUNET_SCHEDULER_add_shutdown(shutdownCb,
+                                                             addr cadetHandle[])
+    Future[ref CadetHandle](future).complete(cadetHandle)
+
+proc connectCadet*(app: ref GnunetApplication): Future[ref CadetHandle] =
+  result = newFuture[ref CadetHandle]("connectCadet")
   app.connectFutures.add("cadet", result)
   discard GNUNET_SCHEDULER_add_now(cadetConnectCb, addr app[])
-
-proc disconnect*(handle: var CadetHandle) =
-  for port in handle.openPorts:
-    handle.closePort(port)
-  GNUNET_CADET_disconnect(handle.handle)
-
-
