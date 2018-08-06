@@ -10,7 +10,7 @@ proc firstTask(gnunetApp: ref GnunetApplication,
                port: string,
                inputFilename: string,
                outputFilename: string) {.async.} =
-  var cadet = await gnunetApp.connectCadet()
+  var cadet = await gnunetApp.initCadet()
   var cadetChannel: ref CadetChannel
   if peer.isNil() and not port.isNil():
     let cadetPort = cadet.openPort(port)
