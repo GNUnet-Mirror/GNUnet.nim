@@ -18,7 +18,7 @@ proc schedulerAdd(cls: pointer,
                   fdi: ptr GNUNET_SCHEDULER_FdInfo): cint {.cdecl.} =
   ## callback allowing GNUnet to add a file descriptor to the event loop
   type AddProc = proc(fd: AsyncFD, cb: proc(fd: AsyncFD): bool)
-  var app = cast[ptr GnunetApplication](cls)
+  let app = cast[ptr GnunetApplication](cls)
   debug("adding fd ", fdi.sock)
   let fd = AsyncFD(fdi.sock)
   proc addByInterest(interest: GNUNET_SCHEDULER_EventType, addProc: AddProc) : bool =
@@ -46,7 +46,7 @@ proc schedulerAdd(cls: pointer,
 proc schedulerDelete(cls: pointer,
                      task: ptr GNUNET_SCHEDULER_Task): cint {.cdecl.} =
   ## callback allowing GNUnet to delete a file descriptor from the event loop
-  var app = cast[ptr GnunetApplication](cls)
+  let app = cast[ptr GnunetApplication](cls)
   var fdi: ptr GNUNET_SCHEDULER_FdInfo
   if app.tasks.take(task, fdi):
     for v in app.tasks.values():
@@ -60,7 +60,7 @@ proc schedulerDelete(cls: pointer,
 proc schedulerSetWakeup(cls: pointer,
                         dt: GNUNET_TIME_Absolute) {.cdecl.} =
   ## callback allowing GNUnet to set a new wakeup time
-  var app = cast[ptr GnunetApplication](cls)
+  let app = cast[ptr GnunetApplication](cls)
   debug("setting new timeout: ", dt.abs_value_us)
   app.timeoutUs = dt.abs_value_us
 

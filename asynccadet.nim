@@ -23,13 +23,13 @@ type
 
 proc channelDisconnectCb(cls: pointer,
                          gnunetChannel: ptr GNUNET_CADET_Channel) {.cdecl.} =
-  var channel = cast[ptr CadetChannel](cls)
+  let channel = cast[ptr CadetChannel](cls)
   channel.messages.complete()
 
 proc channelConnectCb(cls: pointer,
                       gnunetChannel: ptr GNUNET_CADET_Channel,
                       source: ptr GNUNET_PeerIdentity): pointer {.cdecl.} =
-  var port = cast[ptr CadetPort](cls)
+  let port = cast[ptr CadetPort](cls)
   let channel = new(CadetChannel)
   channel.handle = gnunetChannel
   channel.peer = GNUNET_PeerIdentity(public_key: source.public_key)
@@ -40,7 +40,7 @@ proc channelConnectCb(cls: pointer,
 
 proc channelMessageCb(cls: pointer,
                       messageHeader: ptr GNUNET_MessageHeader) {.cdecl.} =
-  var channel = cast[ptr CadetChannel](cls)
+  let channel = cast[ptr CadetChannel](cls)
   GNUNET_CADET_receive_done(channel.handle)
   let payloadLen = int(ntohs(messageHeader.size)) - sizeof(GNUNET_MessageHeader)
   let payload = cast[ptr GNUNET_MessageHeader](cast[ByteAddress](messageHeader) + sizeof(GNUNET_MessageHeader))
@@ -72,7 +72,7 @@ proc hashString(port: string): GNUNET_HashCode =
 proc sendMessage*(channel: ref CadetChannel, payload: string) =
   let messageLen = uint16(payload.len() + sizeof(GNUNET_MessageHeader))
   var messageHeader: ptr GNUNET_MessageHeader
-  var envelope = GNUNET_MQ_msg(addr messageHeader,
+  let envelope = GNUNET_MQ_msg(addr messageHeader,
                                messageLen,
                                GNUNET_MESSAGE_TYPE_CADET_CLI)
   messageHeader = cast[ptr GNUNET_MessageHeader](cast[ByteAddress](messageHeader) + sizeof(GNUNET_MessageHeader))
@@ -80,17 +80,17 @@ proc sendMessage*(channel: ref CadetChannel, payload: string) =
   GNUNET_MQ_send(GNUNET_CADET_get_mq(channel.handle), envelope)
 
 proc openPort*(handle: ref CadetHandle, port: string): ref CadetPort =
-  var handlers = messageHandlers()
-  var port = hashString(port)
-  var openPort = new(CadetPort)
+  let handlers = messageHandlers()
+  let port = hashString(port)
+  let openPort = new(CadetPort)
   openPort.channels = newFutureStream[ref CadetChannel]()
   openPort.handle = GNUNET_CADET_open_port(handle.handle,
-                                           addr port,
+                                           unsafeAddr port,
                                            channelConnectCb,
                                            addr openPort[],
                                            nil,
                                            channelDisconnectCb,
-                                           addr handlers[0])
+                                           unsafeAddr handlers[0])
   openPort.activeChannels = newSeq[ref CadetChannel]()
   handle.openPorts.add(openPort)
   return openPort
@@ -110,19 +110,19 @@ proc createChannel*(handle: ref CadetHandle,
   discard GNUNET_CRYPTO_eddsa_public_key_from_string(peer, #FIXME: don't discard
                                                      peer.len(),
                                                      addr peerIdentity.public_key)
-  var handlers = messageHandlers()
-  var port = hashString(port)
-  var channel = new(CadetChannel)
+  let handlers = messageHandlers()
+  let port = hashString(port)
+  let channel = new(CadetChannel)
   channel.peer = peerIdentity
   channel.messages = newFutureStream[string]("createChannel")
   channel.handle = GNUNET_CADET_channel_create(handle.handle,
                                                addr channel[],
                                                addr channel.peer,
-                                               addr port,
+                                               unsafeAddr port,
                                                GNUNET_CADET_OPTION_DEFAULT,
                                                nil,
                                                channelDisconnectCb,
-                                               addr handlers[0])
+                                               unsafeAddr handlers[0])
   return channel
 
 proc shutdownCb(cls: pointer) {.cdecl.} =
