@@ -30,8 +30,7 @@ proc channelConnectCb(cls: pointer,
                       gnunetChannel: ptr GNUNET_CADET_Channel,
                       source: ptr GNUNET_PeerIdentity): pointer {.cdecl.} =
   var port = cast[ptr CadetPort](cls)
-  var channel: ref CadetChannel
-  new(channel)
+  let channel = new(CadetChannel)
   channel.handle = gnunetChannel
   channel.peer = GNUNET_PeerIdentity(public_key: source.public_key)
   channel.messages = newFutureStream[string]()
@@ -83,8 +82,7 @@ proc sendMessage*(channel: ref CadetChannel, payload: string) =
 proc openPort*(handle: ref CadetHandle, port: string): ref CadetPort =
   var handlers = messageHandlers()
   var port = hashString(port)
-  var openPort: ref CadetPort
-  new(openPort)
+  var openPort = new(CadetPort)
   openPort.channels = newFutureStream[ref CadetChannel]()
   openPort.handle = GNUNET_CADET_open_port(handle.handle,
                                            addr port,
@@ -114,8 +112,7 @@ proc createChannel*(handle: ref CadetHandle,
                                                      addr peerIdentity.public_key)
   var handlers = messageHandlers()
   var port = hashString(port)
-  var channel: ref CadetChannel
-  new(channel)
+  var channel = new(CadetChannel)
   channel.peer = peerIdentity
   channel.messages = newFutureStream[string]("createChannel")
   channel.handle = GNUNET_CADET_channel_create(handle.handle,
