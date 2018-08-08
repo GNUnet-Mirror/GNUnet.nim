@@ -39,6 +39,8 @@ proc firstTask(gnunetApp: ref GnunetApplication,
       asyncCheck outputFile.write(message)
     outputFile.close()
   else:
+    # We're forced to read from stdin like this because it appears
+    # as though the async library cannot do this natively...
     let stdinFile = openAsync("/dev/stdin", fmRead)
     var messagesFuture = cadetChannel.messages.read()
     var stdinFuture = stdinFile.readline()
