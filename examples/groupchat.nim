@@ -1,5 +1,5 @@
-import ../gnunet_application, ../asynccadet
-import asyncdispatch, asyncfile, parseopt, strutils
+import ../gnunet_application, ../asynccadet, ../gnunet_utils
+import asyncdispatch, asyncfile, parseopt, strutils, sequtils
 
 type Chat = object
   channels: seq[ref CadetChannel]
@@ -7,7 +7,7 @@ type Chat = object
 proc publish(chat: ref Chat, message: string, sender: ref CadetChannel = nil) =
   let message =
     if sender.isNil(): message.strip(leading = false)
-    else: "[Alice] " & message.strip(leading = false)
+    else: "[" & sender.peer.peerId() & "] " & message.strip(leading = false)
   echo message
   for c in chat.channels:
     c.sendMessage(message)
@@ -52,14 +52,18 @@ proc firstTask(gnunetApp: ref GnunetApplication,
       let (hasChannel, channel) = await cadetPort.channels.read()
       if not hasChannel:
         break
-      chat.publish(message = "X joined\n")
+      let peerId = channel.peer.peerId()
+      chat.publish(message = peerId & " joined\n")
+      let listParticipants =
+        chat.channels.map(proc(c: ref CadetChannel): string = c.peer.peerId)
+      channel.sendMessage("Wlcome " & peerId & "! participants: " & $listParticipants)
       chat.channels.add(channel)
-      channel.sendMessage("Welcome X! You are talking with: \n")
       closureScope:
         let channel = channel
+        let peerId = peerId
         proc channelDisconnected(future: Future[void]) =
           chat.channels.delete(chat.channels.find(channel))
-          chat.publish(message = "X left\n")
+          chat.publish(message = peerId & " left\n")
         processClientMessages(channel, chat).addCallback(channelDisconnected)
 
 proc main() =
