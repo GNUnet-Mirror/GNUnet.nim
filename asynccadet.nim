@@ -8,13 +8,11 @@ import
 type
   CadetHandle* = object
     handle: ptr GNUNET_CADET_Handle
-    openPorts: seq[ref CadetPort]
     shutdownTask: ptr GNUNET_SCHEDULER_Task
 
   CadetPort* = object
     handle: ptr GNUNET_CADET_Port
     channels*: FutureStream[ref CadetChannel]
-    activeChannels: seq[ref CadetChannel]
 
   CadetChannel* = object
     handle: ptr GNUNET_CADET_Channel
@@ -24,6 +22,8 @@ type
 proc channelDisconnectCb(cls: pointer,
                          gnunetChannel: ptr GNUNET_CADET_Channel) {.cdecl.} =
   let channel = cast[ptr CadetChannel](cls)
+  GNUNET_CADET_receive_done(channel.handle)
+  channel.handle = nil
   channel.messages.complete()
 
 proc channelConnectCb(cls: pointer,
@@ -33,8 +33,7 @@ proc channelConnectCb(cls: pointer,
   let channel = new(CadetChannel)
   channel.handle = gnunetChannel
   channel.peer = GNUNET_PeerIdentity(public_key: source.public_key)
-  channel.messages = newFutureStream[string]()
-  port.activeChannels.add(channel)
+  channel.messages = newFutureStream[string]("channelConnectCb")
   waitFor port.channels.write(channel)
   return addr channel[]
 
@@ -70,6 +69,8 @@ proc hashString(port: string): GNUNET_HashCode =
   GNUNET_CRYPTO_hash(cstring(port), csize(port.len()), addr result)
 
 proc sendMessage*(channel: ref CadetChannel, payload: string) =
+  if channel.handle.isNil():
+    return
   let messageLen = uint16(payload.len() + sizeof(GNUNET_MessageHeader))
   var messageHeader: ptr GNUNET_MessageHeader
   let envelope = GNUNET_MQ_msg(addr messageHeader,
@@ -83,7 +84,6 @@ proc openPort*(handle: ref CadetHandle, port: string): ref CadetPort =
   let handlers = messageHandlers()
   let port = hashString(port)
   let openPort = new(CadetPort)
-  openPort.channels = newFutureStream[ref CadetChannel]()
   openPort.handle = GNUNET_CADET_open_port(handle.handle,
                                            unsafeAddr port,
                                            channelConnectCb,
@@ -91,17 +91,14 @@ proc openPort*(handle: ref CadetHandle, port: string): ref CadetPort =
                                            nil,
                                            channelDisconnectCb,
                                            unsafeAddr handlers[0])
-  openPort.activeChannels = newSeq[ref CadetChannel]()
-  handle.openPorts.add(openPort)
+  openPort.channels = newFutureStream[ref CadetChannel]("openPort")
   return openPort
 
-proc internalClosePort(handle: ptr CadetHandle, port: ref CadetPort) =
-  GNUNET_CADET_close_port(port.handle)
-  port.channels.complete()
-
-proc closePort*(handle: ref CadetHandle, port: ref CadetPort) =
-  internalClosePort(addr handle[], port)
-  handle.openPorts.delete(handle.openPorts.find(port))
+proc close*(port: ref CadetPort) =
+  if not port.handle.isNil():
+    GNUNET_CADET_close_port(port.handle)
+    port.handle = nil
+    port.channels.complete()
 
 proc createChannel*(handle: ref CadetHandle,
                     peer: string,
@@ -125,14 +122,15 @@ proc createChannel*(handle: ref CadetHandle,
                                                unsafeAddr handlers[0])
   return channel
 
+proc close*(channel: ref CadetChannel) =
+  if not channel.handle.isNil():
+    GNUNET_CADET_channel_destroy(channel.handle)
+    channel.handle = nil
+
 proc disconnect(cadetHandle: ptr CadetHandle) =
-  if cadetHandle.handle.isNil():
-    return
-  for port in cadetHandle.openPorts:
-    cadetHandle.internalClosePort(port)
-  cadetHandle.openPorts.setLen(0)
-  GNUNET_CADET_disconnect(cadetHandle.handle)
-  cadetHandle.handle = nil
+  if not cadetHandle.handle.isNil():
+    GNUNET_CADET_disconnect(cadetHandle.handle)
+    cadetHandle.handle = nil
 
 proc shutdownCb(cls: pointer) {.cdecl.} =
   disconnect(cast[ptr CadetHandle](cls))
@@ -144,7 +142,6 @@ proc cadetConnectCb(cls: pointer) {.cdecl.} =
     var cadetHandle: ref CadetHandle
     new(cadetHandle, proc(handle: ref CadetHandle) = disconnect(addr handle[]))
     cadetHandle.handle = GNUNET_CADET_connect(app.configHandle)
-    cadetHandle.openPorts = newSeq[ref CadetPort]()
     cadetHandle.shutdownTask = GNUNET_SCHEDULER_add_shutdown(shutdownCb,
                                                              addr cadetHandle[])
     Future[ref CadetHandle](future).complete(cadetHandle)
