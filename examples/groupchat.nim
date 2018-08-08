@@ -56,7 +56,7 @@ proc firstTask(gnunetApp: ref GnunetApplication,
       chat.publish(message = peerId & " joined\n")
       let listParticipants =
         chat.channels.map(proc(c: ref CadetChannel): string = c.peer.peerId)
-      channel.sendMessage("Wlcome " & peerId & "! participants: " & $listParticipants)
+      channel.sendMessage("Welcome " & peerId & "! participants: " & $listParticipants)
       chat.channels.add(channel)
       closureScope:
         let channel = channel
