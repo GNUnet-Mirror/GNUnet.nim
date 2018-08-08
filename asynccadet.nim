@@ -1,7 +1,7 @@
 import
   gnunet_cadet_service, gnunet_types, gnunet_mq_lib, gnunet_crypto_lib, gnunet_protocols, gnunet_scheduler_lib, gnunet_configuration_lib
 import
-  gnunet_application
+  gnunet_application, gnunet_utils
 import
   asyncdispatch, posix, tables, logging
 
@@ -16,7 +16,7 @@ type
 
   CadetChannel* = object
     handle: ptr GNUNET_CADET_Channel
-    peer: GNUNET_PeerIdentity
+    peer*: GNUNET_PeerIdentity
     messages*: FutureStream[string]
 
 proc channelDisconnectCb(cls: pointer,

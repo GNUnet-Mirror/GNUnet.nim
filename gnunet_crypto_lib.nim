@@ -21,10 +21,7 @@ type
     bits*: array[256 div 8 div sizeof((uint32)), uint32]
 
 
-
-import
-  gnunet_types, gnunet_configuration_lib
-
+import gnunet_configuration_lib
 
 const
   GNUNET_CRYPTO_ECC_SIGNATURE_DATA_ENCODING_LENGTH* = 126
@@ -241,12 +238,6 @@ type
   GNUNET_CRYPTO_FileHashContext* {.bycopy.} = object
   
 
-
-proc GNUNET_CRYPTO_hash_file*(priority: GNUNET_SCHEDULER_Priority;
-                             filename: cstring; blocksize: csize;
-                             callback: GNUNET_CRYPTO_HashCompletedCallback;
-                             callback_cls: pointer): ptr GNUNET_CRYPTO_FileHashContext {.
-    cdecl, importc: "GNUNET_CRYPTO_hash_file", dynlib: libname.}
 
 proc GNUNET_CRYPTO_hash_file_cancel*(fhc: ptr GNUNET_CRYPTO_FileHashContext) {.
     cdecl, importc: "GNUNET_CRYPTO_hash_file_cancel", dynlib: libname.}
