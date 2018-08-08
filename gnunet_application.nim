@@ -84,6 +84,9 @@ proc initGnunetApplication*(configFile: string): ref GnunetApplication =
   assert(GNUNET_SYSERR != GNUNET_CONFIGURATION_load(app.configHandle, configFile))
   return app
 
+proc shutdownGnunetApplication*() =
+  GNUNET_SCHEDULER_shutdown()
+
 proc doWork*(app: ref GnunetApplication) =
   discard GNUNET_SCHEDULER_do_work(app.schedulerHandle) #FIXME: don't discard
 
