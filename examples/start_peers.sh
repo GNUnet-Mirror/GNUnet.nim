@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 CONFIG1=gnunet1.conf
 CONFIG2=gnunet2.conf
 CONFIG3=gnunet3.conf
