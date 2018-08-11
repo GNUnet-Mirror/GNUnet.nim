@@ -81,7 +81,8 @@ proc initGnunetApplication*(configFile: string): ref GnunetApplication =
   app.schedulerHandle = GNUNET_SCHEDULER_driver_init(addr app.schedulerDriver)
   app.configHandle = GNUNET_CONFIGURATION_create()
   app.connectFutures = initTable[string, FutureBase]()
-  assert(GNUNET_SYSERR != GNUNET_CONFIGURATION_load(app.configHandle, configFile))
+  let loadResult = GNUNET_CONFIGURATION_load(app.configHandle, configFile)
+  assert(GNUNET_SYSERR != loadResult)
   return app
 
 proc shutdownGnunetApplication*() =
