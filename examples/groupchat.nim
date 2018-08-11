@@ -1,5 +1,5 @@
 import ../gnunet_application, ../asynccadet, ../gnunet_utils
-import asyncdispatch, asyncfile, parseopt, strutils, sequtils
+import asyncdispatch, asyncfile, parseopt, strutils, sequtils, times, os
 
 type Chat = object
   channels: seq[ref CadetChannel]
@@ -8,7 +8,7 @@ proc publish(chat: ref Chat, message: string, sender: ref CadetChannel = nil) =
   let message =
     if sender.isNil(): message.strip(leading = false)
     else: "[" & sender.peer.peerId() & "] " & message.strip(leading = false)
-  echo message
+  echo getDatestr(), " ", getClockStr(), " ", message
   for c in chat.channels:
     c.sendMessage(message)
 
@@ -34,7 +34,7 @@ proc processServerMessages(channel: ref CadetChannel) {.async.} =
       let (hasData, message) = messageFuture.read()
       if not hasData:
         break
-      echo message
+      echo getDateStr()," ",getClockStr()," ",message
       messageFuture = channel.messages.read()
 
 proc firstTask(gnunetApp: ref GnunetApplication,
