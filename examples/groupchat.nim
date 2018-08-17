@@ -21,21 +21,17 @@ proc processClientMessages(channel: ref CadetChannel,
     chat.publish(message = message, sender = channel)
 
 proc processServerMessages(channel: ref CadetChannel) {.async.} =
-  let inputFile = openAsync("/dev/stdin", fmRead)
-  var inputFuture = inputFile.readline()
-  var messageFuture = channel.messages.read()
   while true:
-    await inputFuture or messageFuture
-    if inputFuture.finished():
-      let input = inputFuture.read()
-      channel.sendMessage(input)
-      inputFuture = inputFile.readline()
-    else:
-      let (hasData, message) = messageFuture.read()
-      if not hasData:
-        break
-      echo getDateStr()," ",getClockStr()," ",message
-      messageFuture = channel.messages.read()
+    let (hasData, message) = await channel.messages.read()
+    if not hasData:
+      shutdownGnunetApplication()
+      return
+    echo getDateStr()," ",getClockStr()," ",message
+
+proc processInput(inputFile: AsyncFile, channel: ref CadetChannel) {.async.} =
+  while true:
+    let input = await inputFile.readline()
+    channel.sendMessage(input)
 
 proc firstTask(gnunetApp: ref GnunetApplication,
                server: string,
@@ -44,8 +40,10 @@ proc firstTask(gnunetApp: ref GnunetApplication,
   var chat = new(Chat)
   chat.channels = newSeq[ref CadetChannel]()
   if not server.isNil():
+    let inputFile = openAsync("/dev/stdin", fmRead)
     let channel = cadet.createChannel(server, port)
-    processServerMessages(channel).addCallback(shutdownGnunetApplication)
+    await processServerMessages(channel) or processInput(inputFile, channel)
+    inputFile.close()
   else:
     let cadetPort = cadet.openPort(port)
     while true:
@@ -80,12 +78,10 @@ proc main() =
       assert(false)
   var gnunetApp = initGnunetApplication(configfile)
   asyncCheck firstTask(gnunetApp, server, port)
-  try:
-    while true:
-      poll(gnunetApp.millisecondsUntilTimeout())
-      gnunetApp.doWork()
-  except ValueError:
-    echo "quitting"
+  while hasPendingOperations():
+    poll(gnunetApp.millisecondsUntilTimeout())
+    gnunetApp.doWork()
+  echo "quitting"
 
 main()
 GC_fullCollect()
