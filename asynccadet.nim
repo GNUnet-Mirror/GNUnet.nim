@@ -22,9 +22,11 @@ type
 proc channelDisconnectCb(cls: pointer,
                          gnunetChannel: ptr GNUNET_CADET_Channel) {.cdecl.} =
   let channel = cast[ptr CadetChannel](cls)
-  GNUNET_CADET_receive_done(channel.handle)
   channel.handle = nil
   channel.messages.complete()
+  # workaround: if poll in main is called with a timeout > 0, the stream reader is
+  # not notified about the end of the stream (Nim bug?). So call poll here, too.
+  poll(0)
 
 proc channelConnectCb(cls: pointer,
                       gnunetChannel: ptr GNUNET_CADET_Channel,
