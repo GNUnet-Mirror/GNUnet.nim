@@ -1,5 +1,5 @@
 import ../gnunet_application, ../asynccadet, ../gnunet_utils
-import asyncdispatch, asyncfile, parseopt, strutils, sequtils, times, os, nimbox
+import asyncdispatch, asyncfile, parseopt, strutils, sequtils, times, os
 
 type Chat = object
   channels: seq[ref CadetChannel]
@@ -28,17 +28,10 @@ proc processServerMessages(channel: ref CadetChannel) {.async.} =
       return
     echo getDateStr()," ",getClockStr()," ",message
 
-proc processInput(inputFile: AsyncFile, channel: ref CadetChannel, nb: NimBox) {.async.} =
-  var line = ""
+proc processInput(inputFile: AsyncFile, channel: ref CadetChannel) {.async.} =
   while true:
-    let ch = await inputFile.read(1)
-    case ch
-    of "\n":
-      line = ""
-    else:
-      line.add(ch)
-    nb.print(0, 11, line)
-    nb.present()
+    let input = await inputFile.readline()
+    channel.sendMessage(input)
 
 proc firstTask(gnunetApp: ref GnunetApplication,
                server: string,
@@ -49,10 +42,8 @@ proc firstTask(gnunetApp: ref GnunetApplication,
   if not server.isNil():
     let inputFile = openAsync("/dev/stdin", fmRead)
     let channel = cadet.createChannel(server, port)
-    let nb = newNimbox()
-    await processServerMessages(channel) or processInput(inputFile, channel, nb)
+    await processServerMessages(channel) or processInput(inputFile, channel)
     inputFile.close()
-    nb.shutdown()
   else:
     let cadetPort = cadet.openPort(port)
     while true:
