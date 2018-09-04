@@ -1,6 +1,6 @@
-import gnunet_application
-import asyncdispatch, asyncfutures, asyncfile
-import asynccadet
+import ../gnunet_application
+import ../asyncdispatch, ../asyncfutures, ../asyncfile
+import ../asynccadet
 import parseopt
 import strutils
 import posix
