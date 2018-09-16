@@ -76,12 +76,22 @@ proc main() =
       of "port", "p": port = value
     else:
       assert(false)
+  if configfile.isNil():
+    echo "I need a config file to use."
+    echo "  Add -c=<gnunet.conf>"
+    return
+  if port.isNil():
+    echo "I need a shared secret port to use."
+    echo "  Add -p=<sharedsecret>"
+    return
+  if server.isNil():
+    echo "Entering server mode."
   var gnunetApp = initGnunetApplication(configfile)
   asyncCheck firstTask(gnunetApp, server, port)
   while hasPendingOperations():
     poll(gnunetApp.millisecondsUntilTimeout())
     gnunetApp.doWork()
-  echo "quitting"
+  echo "Quitting."
 
 main()
 GC_fullCollect()
