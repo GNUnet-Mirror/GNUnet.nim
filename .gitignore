@@ -1,7 +1,10 @@
 /gnunet_nim
-/nimcache
+nimcache
 /gnunet_data_home
 /gnunet_home
 /otherpeer_data_home
 /otherpeer_home
-
+examples/groupchat
+*.pretty.nim
+*.backup
+nakefile
