@@ -8,3 +8,5 @@ examples/groupchat
 *.pretty.nim
 *.backup
 nakefile
+\#*\#
+*~
