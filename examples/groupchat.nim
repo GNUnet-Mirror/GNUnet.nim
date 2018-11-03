@@ -39,7 +39,7 @@ proc firstTask(gnunetApp: ref GnunetApplication,
   let cadet = await gnunetApp.initCadet()
   var chat = new(Chat)
   chat.channels = newSeq[ref CadetChannel]()
-  if not server.isNil():
+  if server != "":
     let inputFile = openAsync("/dev/stdin", fmRead)
     let channel = cadet.createChannel(server, port)
     await processServerMessages(channel) or processInput(inputFile, channel)
@@ -76,15 +76,15 @@ proc main() =
       of "port", "p": port = value
     else:
       assert(false)
-  if configfile.isNil():
+  if configfile == "":
     echo "I need a config file to use."
     echo "  Add -c=<gnunet.conf>"
     return
-  if port.isNil():
+  if port == "":
     echo "I need a shared secret port to use."
     echo "  Add -p=<sharedsecret>"
     return
-  if server.isNil():
+  if server == "":
     echo "Entering server mode."
   var gnunetApp = initGnunetApplication(configfile)
   asyncCheck firstTask(gnunetApp, server, port)
