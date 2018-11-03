@@ -3,14 +3,14 @@ version = "0.0.0"
 author = "secushare"
 description = "GNUnet Nim bindings"
 license = "AGPL3"
-# srcDir = ""
+srcDir = "src"
 
 # dependencies:
-requires = "nim >= 0.18.0"
+requires "nim >= 0.18.0"
 
-when defined(nimdistros):
-  import distros
-  foreignDep "gnunet"
+#when defined(nimdistros):
+#  import distros
+#  foreignDep "gnunet"
 
 # targets/tasks:
 

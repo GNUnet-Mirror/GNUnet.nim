@@ -1,9 +1,12 @@
-import
-  gnunet_cadet_service, gnunet_types, gnunet_mq_lib, gnunet_crypto_lib, gnunet_protocols, gnunet_scheduler_lib, gnunet_configuration_lib
-import
-  gnunet_application, gnunet_utils
-import
-  asyncdispatch, posix, tables, logging
+import gnunet_cadet_service
+import gnunet_types
+import gnunet_mq_lib
+import gnunet_crypto_lib
+import gnunet_protocols
+import gnunet_scheduler_lib
+import gnunet_configuration_lib
+import scheduler
+import asyncdispatch, posix, tables, logging
 
 type
   CadetHandle* = object
