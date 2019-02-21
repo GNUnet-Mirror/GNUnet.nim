@@ -121,7 +121,7 @@ proc createChannel*(handle: ref CadetHandle,
                                                addr channel[],
                                                addr channel.peer,
                                                unsafeAddr port,
-                                               GNUNET_CADET_OPTION_DEFAULT,
+                                               GNUNET_CADET_OPTION_RELIABLE,
                                                nil,
                                                channelDisconnectCb,
                                                unsafeAddr handlers[0])
