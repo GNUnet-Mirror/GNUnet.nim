@@ -1,6 +1,5 @@
-import ../gnunet_application
+import ../src/gnunet_nim, ../src/gnunet_nim/cadet
 import ../asyncdispatch, ../asyncfutures, ../asyncfile
-import ../asynccadet
 import parseopt
 import strutils
 import posix
@@ -12,16 +11,16 @@ proc firstTask(gnunetApp: ref GnunetApplication,
                outputFilename: string) {.async.} =
   var cadet = await gnunetApp.initCadet()
   var cadetChannel: ref CadetChannel
-  if peer.isNil() and not port.isNil():
+  if (peer == "") and not (port == ""):
     let cadetPort = cadet.openPort(port)
     let (hasChannel, channel) = await cadetPort.channels.read()
     if not hasChannel:
       return
     echo "incoming connection!"
     cadetChannel = channel
-  elif not peer.isNil() and not port.isNil():
+  elif not (peer == "") and not (port == ""):
     cadetChannel = cadet.createChannel(peer, port)
-  if not inputFilename.isNil():
+  if not (inputFilename == ""):
     let inputFile = openAsync(inputFilename, fmRead)
     while true:
       # 64k is close to the limit of GNUNET_CONSTANTS_MAX_CADET_MESSAGE_SIZE
@@ -30,7 +29,7 @@ proc firstTask(gnunetApp: ref GnunetApplication,
         break
       cadetChannel.sendMessage(content)
     inputFile.close()
-  elif not outputFilename.isNil():
+  elif not (outputFilename == ""):
     let outputFile = openAsync(outputFilename, fmWrite)
     while true:
       let (hasData, message) = await cadetChannel.messages.read()
