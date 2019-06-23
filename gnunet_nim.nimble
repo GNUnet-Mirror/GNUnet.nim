@@ -1,5 +1,5 @@
 # package:
-version = "0.0.0"
+version = "0.1.0"
 author = "secushare"
 description = "GNUnet Nim bindings"
 license = "AGPL3"
