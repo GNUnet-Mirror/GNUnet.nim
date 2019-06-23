@@ -1,5 +1,5 @@
 This is no repo for end user.
 
-If you like to use gnunet_nim for your own application you can have a look into gnunet.org/groupchat.git how integration works.
+If you like to use gnunet_nim for your own application you can have a look into gnunet.org/groupchat.git how integration works, or take a look into the examples folder.
 
 groupchat is a nim implementation of a simple cli group chat.
