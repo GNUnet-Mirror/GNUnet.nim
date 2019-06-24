@@ -44,7 +44,6 @@ proc channelConnectCb(cls: pointer,
 
 proc channelMessageCb(cls: pointer,
                       messageHeader: ptr GNUNET_MessageHeader) {.cdecl.} =
-  echo "channelMessageCb"
   let channel = cast[ptr CadetChannel](cls)
   GNUNET_CADET_receive_done(channel.handle)
   let payloadLen = int(ntohs(messageHeader.size)) - sizeof(GNUNET_MessageHeader)
