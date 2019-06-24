@@ -44,12 +44,14 @@ proc channelConnectCb(cls: pointer,
 
 proc channelMessageCb(cls: pointer,
                       messageHeader: ptr GNUNET_MessageHeader) {.cdecl.} =
+  echo "channelMessageCb"
   let channel = cast[ptr CadetChannel](cls)
   GNUNET_CADET_receive_done(channel.handle)
   let payloadLen = int(ntohs(messageHeader.size)) - sizeof(GNUNET_MessageHeader)
   let payload = cast[ptr GNUNET_MessageHeader](cast[ByteAddress](messageHeader) + sizeof(GNUNET_MessageHeader))
   var payloadBuf = newString(payloadLen)
-  copyMem(addr payloadBuf[0], payload, payloadLen)
+  if payloadLen > 0:
+    copyMem(addr payloadBuf[0], payload, payloadLen)
   waitFor channel.messages.write(payloadBuf)
 
 proc channelMessageCheckCb(cls: pointer,
