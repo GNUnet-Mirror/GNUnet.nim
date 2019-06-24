@@ -48,7 +48,7 @@ proc doWork*(app: ref GnunetApplication) =
   discard GNUNET_SCHEDULER_do_work(app.schedulerHandle) #FIXME: don't discard
 
 proc isAlive*(app: ref GnunetApplication): bool =
-  app.tasks.len() > 0 and app.timeoutUs > 0
+  app.tasks.len() > 0 and app.timeoutUs > 0'u64
 
 proc microsecondsUntilTimeout*(app: ref GnunetApplication): int =
   ## get the duration until timeout in microseconds
